@@ -30,7 +30,7 @@
 
 1. **Clone the repo**
    ```bash
-   git clone https://github.com/<your-username>/moonshot-iot-stack.git
+   git clone https://github.com/iuriarte/moonshot-iot-stack.git
    cd moonshot-iot-stack
    ```
 
@@ -74,6 +74,11 @@ To test just the model API:
 cd model
 docker build -t moonshot-modelapi .
 docker run -p 5001:5000 moonshot-modelapi
+```
+
+Or pull from Docker Hub:
+```bash
+docker run -p 5000:5000 iuriarte/moonshot-iot-stack:modelapi
 ```
 
 ## 📁 Folder Structure
