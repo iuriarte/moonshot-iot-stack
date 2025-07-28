@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  nodered:
+    image: nodered/node-red:latest
+    restart: unless-stopped
+    ports:
+      - "1880:1880"
+    volumes:
+      - ./data/nodered:/data
+    environment:
+      - TZ=UTC
+    depends_on:
+      - influxdb
+      - mosquitto
+
+  influxdb:
+    image: influxdb:2.7
+    restart: unless-stopped
+    ports:
+      - "8086:8086"
+    volumes:
+      - ./data/influxdb:/var/lib/influxdb2
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=adminpassword
+      - DOCKER_INFLUXDB_INIT_ORG=moonshot
+      - DOCKER_INFLUXDB_INIT_BUCKET=moonshot_data
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=secrettoken
+
+  grafana:
+    image: grafana/grafana:latest
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data/grafana:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - influxdb
+
+  modelapi:
+    platform: linux/amd64
+    build:
+      context: ./model
+    restart: unless-stopped
+    container_name: edge-model-api
+    ports:
+        - "5001:5000"
+    environment:
+        - MODEL_PATH=/app/model.onnx
+        - INFLUXDB_URL=http://influxdb:8086
+        - INFLUXDB_TOKEN=secrettoken
+        - INFLUXDB_ORG=moonshot
+        - INFLUXDB_BUCKET=moonshot_data
+    depends_on:
+        - influxdb
+    healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost:5000/readycheck"]
+        interval: 30s
+        timeout: 5s
+        retries: 3
+
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./config/mosquitto:/mosquitto/config
+      - ./data/mosquitto:/mosquitto/data
+      - ./log/mosquitto:/mosquitto/log
+
+networks:
+  default:
+    name: moonshot-iot-net
